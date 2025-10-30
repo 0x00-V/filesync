@@ -62,6 +62,50 @@ std::string returnFileSha1(const std::string& filename)
   return oss.str();
 }
 
+void recursiveItems(const std::filesystem::path& path){
+  try{
+    for(const auto& item : std::filesystem::directory_iterator(path)){
+      if(item.is_regular_file()){
+        std::cout << item.path() << " -> " << returnFileSha1(item.path().string()) << '\n';
+      } else if(item.is_directory()){
+        std::cout << "Directory: " << item.path() << '\n';
+        recursiveItems(item.path());
+      }
+     
+    }
+  }catch(const std::exception& e){
+    std::cerr << "Error: " << e.what() << '\n';
+  }
+
+}
+
+
+void compareItems(std::filesystem::path& folder1, std::filesystem::path& folder2){
+  try{
+    std::cout << "\n\nFolder 1:\n";
+    for(const auto& e1 : std::filesystem::directory_iterator(folder1)){
+      if(e1.is_regular_file()){
+        std::cout << e1.path() << " -> " << returnFileSha1(e1.path().string()) << '\n';
+      } else if(e1.is_directory()){
+        std::cout << "Exploring Directory: " << e1.path() << '\n';
+        recursiveItems(e1.path());
+      }
+    }
+
+    std::cout << "\n\nFolder 2:\n";
+    for(const auto& e2 : std::filesystem::directory_iterator(folder2)){
+      if(e2.is_regular_file()){
+        std::cout << e2.path() << " -> " << returnFileSha1(e2.path().string()) << '\n';
+      } else if(e2.is_directory()){
+        std::cout << "Exploring Directory: " << e2.path() << '\n';
+        recursiveItems(e2.path());
+      }
+    }
+    std::cout << "\n\n";
+  }catch(const std::exception& e){
+    std::cerr << "Error: " << e.what() << '\n';
+  }
+}
 
 int main() {
   /*std::string path = "./";
@@ -75,24 +119,10 @@ int main() {
     std::cerr << "Error: " << e.what() << '\n';
   }*/
 
-  std::string folder1 = "./testfolder1/";
-  std::string folder2 = "./testfolder2/";
+  std::filesystem::path folder1 = "./testfolder1/";
+  std::filesystem::path folder2 = "./testfolder2/";
+  compareItems(folder1, folder2);
 
-  try{
-    for(const auto& e1 : std::filesystem::directory_iterator(folder1)){
-      for(const auto& e2 : std::filesystem::directory_iterator(folder2)){
-        if(e1.is_regular_file() && e2.is_regular_file()){
-          std::cout << e1.path() << " -> " << returnFileSha1(e1.path().string()) << '\n';
-          std::cout << e2.path() << " -> " << returnFileSha1(e2.path().string()) << '\n';
-        }else{
-          std::cout << "Ignoring Folders (Will implement recursion soon)\n";
-          //std::filesystem::is_directory(path);
-        }
-      }
-    }
-  }catch(const std::exception& e){
-    std::cerr << "Error: " << e.what() << '\n';
-  }
-  return 0;
+    return 0;
 }
 
