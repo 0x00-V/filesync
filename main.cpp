@@ -64,7 +64,7 @@ std::string returnFileSha1(const std::string& filename)
 
 
 int main() {
-  std::string path = "./";
+  /*std::string path = "./";
   try{
     for (const auto& entry : std::filesystem::directory_iterator(path)){
       if(entry.is_regular_file()){
@@ -72,6 +72,25 @@ int main() {
       }
     }
   } catch(const std::exception& e){
+    std::cerr << "Error: " << e.what() << '\n';
+  }*/
+
+  std::string folder1 = "./testfolder1/";
+  std::string folder2 = "./testfolder2/";
+
+  try{
+    for(const auto& e1 : std::filesystem::directory_iterator(folder1)){
+      for(const auto& e2 : std::filesystem::directory_iterator(folder2)){
+        if(e1.is_regular_file() && e2.is_regular_file()){
+          std::cout << e1.path() << " -> " << returnFileSha1(e1.path().string()) << '\n';
+          std::cout << e2.path() << " -> " << returnFileSha1(e2.path().string()) << '\n';
+        }else{
+          std::cout << "Ignoring Folders (Will implement recursion soon)\n";
+          //std::filesystem::is_directory(path);
+        }
+      }
+    }
+  }catch(const std::exception& e){
     std::cerr << "Error: " << e.what() << '\n';
   }
   return 0;
