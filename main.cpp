@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include <filesystem>
 #include <sstream>
 #include <vector>
 #include <stdexcept>
@@ -63,10 +64,13 @@ std::string returnFileSha1(const std::string& filename)
 
 
 int main() {
+  std::string path = "./";
   try{
-    std::string filename = "test.txt";
-    std::string hash = returnFileSha1(filename);
-    std::cout << "SHA1(" << filename << ") - " << hash << '\n';
+    for (const auto& entry : std::filesystem::directory_iterator(path)){
+      if(entry.is_regular_file()){
+        std::cout << entry.path() << " -> " << returnFileSha1(entry.path().string()) << '\n';
+      }
+    }
   } catch(const std::exception& e){
     std::cerr << "Error: " << e.what() << '\n';
   }
