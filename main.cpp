@@ -1,65 +1,75 @@
 #include <iostream>
-#include <iomanip>
-#include <sstream>
 #include <fstream>
-#include <chrono>
-#include <format>
-#include <filesystem>
+#include <sstream>
+#include <vector>
+#include <stdexcept>
+#include <iomanip>
+
 #include <openssl/evp.h>
-#include <openssl/md5.h>
 
 
-std::string md5_file(const std::string& filename){
-    unsigned char hash[EVP_MAX_MD_SIZE];
-    unsigned int length = 0;
+std::string makeSHA1evp(const char* text, size_t text_len)
+{
+  EVP_MD_CTX *mdctx;
+  const EVP_MD *md;
+  unsigned char md_value[EVP_MAX_MD_SIZE];
+  unsigned int md_len;
 
-    EVP_MD_CTX* ctx = EVP_MD_CTX_new();
-    EVP_DigestInit_ex(ctx, EVP_md5(), nullptr);
+  md = EVP_sha1();
+  mdctx = EVP_MD_CTX_new();
+  EVP_DigestInit_ex(mdctx, md, NULL);
+  EVP_DigestUpdate(mdctx, text, text_len);
 
-    std::ifstream file(filename, std::ios::binary);
-    if (!file.is_open()){
-        EVP_MD_CTX_free(ctx);
-        throw std::runtime_error("Could not open file: " + filename);
-    }
-
-    const std::size_t bufferSize = 4096;
-    char buffer[bufferSize];
-    while (file.good()){
-        file.read(buffer, bufferSize);
-        std::streamsize bytesRead = file.gcount();
-        if (bytesRead > 0){
-            EVP_DigestUpdate(ctx, buffer, bytesRead);
-        }
-    }
-
-    EVP_DigestFinal_ex(ctx, hash, &length);
-    EVP_MD_CTX_free(ctx);
-
-    std::stringstream ss;
-    for (unsigned int i = 0; i < length; i++){
-        ss << std::hex << std::setw(2) << std::setfill('0')
-           << static_cast<int>(hash[i]);
-    }
-    return ss.str();
+  EVP_DigestFinal_ex(mdctx, md_value, &md_len);
+  EVP_MD_CTX_free(mdctx);
+  std::ostringstream oss;
+  for(unsigned int i = 0; i < md_len; i++){
+    oss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(md_value[i]);
+  }
+  return oss.str();
 }
 
-int main() {
-    std::string filename = "test.txt";
-    try{
-        std::string hash = md5_file(filename);
-        std::cout << filename << " MD5: " << hash << '\n';
+std::string returnFileSha1(const std::string& filename)
+{
+  const EVP_MD* md = EVP_sha1();
+  EVP_MD_CTX* mdctx = EVP_MD_CTX_new();
+  EVP_DigestInit_ex(mdctx, md, NULL);
 
-        auto ftime = std::filesystem::last_write_time(filename);
-        auto sctp = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
-            ftime - decltype(ftime)::clock::now() + std::chrono::system_clock::now()
-        );
-        std::time_t cftime = std::chrono::system_clock::to_time_t(sctp);
-        std::cout << "File write time is "
-                  << std::put_time(std::localtime(&cftime), "%F %T") << '\n';
-
-    } catch (const std::exception& e) {
-        std::cerr << e.what() << '\n';
+  std::ifstream file(filename, std::ios::binary);
+  if(!file){
+    EVP_MD_CTX_free(mdctx);
+    throw std::runtime_error("Couldn't open " + filename + ".\n");
+  }
+  
+  std::vector<char> buffer(4096);
+  while(file.good()){
+    file.read(buffer.data(), buffer.size());
+    std::streamsize bytesRead = file.gcount();
+    if(bytesRead > 0){
+      EVP_DigestUpdate(mdctx, buffer.data(), bytesRead);
     }
-    return 0;
+  }
+  unsigned char md_val[EVP_MAX_MD_SIZE];
+  unsigned int md_len;
+  EVP_DigestFinal_ex(mdctx, md_val, &md_len);
+  EVP_MD_CTX_free(mdctx);
+
+  std::ostringstream oss;
+  for(unsigned int i = 0; i < md_len; i++){
+    oss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(md_val[i]);
+  }
+  return oss.str();
+}
+
+
+int main() {
+  try{
+    std::string filename = "test.txt";
+    std::string hash = returnFileSha1(filename);
+    std::cout << "SHA1(" << filename << ") - " << hash << '\n';
+  } catch(const std::exception& e){
+    std::cerr << "Error: " << e.what() << '\n';
+  }
+  return 0;
 }
 
